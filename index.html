@@ -13,13 +13,15 @@ h1{margin:0 0 6px}
 .card{background:#141826;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;margin:12px 0}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 button{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.12);color:#fff;font-weight:800;cursor:pointer}
+button:hover{transform:translateY(-1px)}
 button:disabled{opacity:.5;cursor:not-allowed}
 .primary{background:#fff;color:#0b0d12;border-color:transparent}
 .danger{background:rgba(255,77,77,.18);border-color:rgba(255,77,77,.35)}
-.pill{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12)}
-input[type=range]{width:160px}
-kbd{display:inline-block;min-width:28px;text-align:center;padding:6px 8px;margin:2px;border-radius:10px;border:1px solid rgba(255,255,255,.14)}
+.pill{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);color:#c7cfef;font-size:13px}
+input[type="range"]{width:160px}
+kbd{display:inline-block;min-width:28px;text-align:center;padding:6px 8px;margin:2px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);font-weight:900}
 .status{margin-top:10px;font-size:13px;color:#aab3d6}
+.mono{font-family:ui-monospace,monospace}
 audio{width:100%}
 a{color:#9fffcf}
 </style>
@@ -28,15 +30,13 @@ a{color:#9fffcf}
 <body>
 <div class="wrap">
 <h1>MyChillingTime — FINAL</h1>
-
 <p class="muted">
-Files in same folder:
-<b>bott.mp3</b>,
-<b>dj-elvis-dante.wav</b>,
-<b>boom.wav</b>
+Files in SAME folder:
+<span class="mono">bott.mp3</span>,
+<span class="mono">dj-elvis-dante.wav</span>,
+<span class="mono">boom.wav</span>
 </p>
 
-<!-- BEAT -->
 <div class="card">
   <div class="row">
     <button id="startBeat" class="primary">▶ Start Beat</button>
@@ -45,146 +45,104 @@ Files in same folder:
     <span class="pill">
       Beat Vol
       <input id="beatVol" type="range" min="0" max="1" step="0.01" value="0.75">
-      <span id="beatVolLabel">0.75</span>
+      <span id="beatVolLabel" class="mono">0.75</span>
     </span>
 
     <span class="pill">
       Key Vol
       <input id="keyVol" type="range" min="0" max="1" step="0.01" value="0.55">
-      <span id="keyVolLabel">0.55</span>
+      <span id="keyVolLabel" class="mono">0.55</span>
     </span>
   </div>
-  <div class="status" id="status">Status: ready</div>
+  <div class="status" id="status">Status: ready.</div>
 </div>
 
-<!-- FX -->
 <div class="card">
-  <button id="elvisBtn" class="primary">🎙️ ELVIS</button>
-  <button id="boomBtn">💥 BOOM</button>
+  <div class="row">
+    <button id="elvisBtn" class="primary">🎙️ ELVIS</button>
+    <button id="boomBtn">💥 BOOM</button>
+  </div>
 </div>
 
-<!-- KEYS -->
 <div class="card">
-  <p class="muted"><b>Keyboard</b></p>
+  <p class="muted"><b>Keyboard (API)</b></p>
   <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd><kbd>J</kbd>
   <kbd>K</kbd><kbd>L</kbd>
-  <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd>
-  <kbd>U</kbd><kbd>I</kbd><kbd>O</kbd><kbd>P</kbd>
+  <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd><kbd>U</kbd><kbd>I</kbd><kbd>O</kbd><kbd>P</kbd>
 </div>
 
-<!-- RECORDER -->
 <div class="card">
-  <button id="recBtn" class="primary">⏺ Start Recording</button>
-  <button id="stopRecBtn" class="danger" disabled>⏹ Stop & Save</button>
-  <div class="status" id="recStatus">Recorder: idle</div>
+  <div class="row">
+    <button id="recBtn" class="primary">⏺ Start Recording</button>
+    <button id="stopRecBtn" class="danger" disabled>⏹ Stop & Save</button>
+  </div>
+  <div class="status" id="recStatus">Recorder: idle.</div>
   <audio id="playback" controls></audio>
   <a id="download" style="display:none">⬇ Download recording</a>
 </div>
 </div>
 
 <script>
-/* FILES */
 const BEAT_FILE="bott.mp3";
 const ELVIS_FILE="dj-elvis-dante.wav";
 const BOOM_FILE="boom.wav";
 
-/* AUDIO */
 const beat=new Audio(BEAT_FILE); beat.loop=true;
 const elvis=new Audio(ELVIS_FILE);
 const boom=new Audio(BOOM_FILE);
 
-/* UI */
+const statusEl=document.getElementById("status");
 const startBeat=document.getElementById("startBeat");
 const stopBeat=document.getElementById("stopBeat");
 const beatVol=document.getElementById("beatVol");
-const keyVol=document.getElementById("keyVol");
 const beatVolLabel=document.getElementById("beatVolLabel");
+const keyVol=document.getElementById("keyVol");
 const keyVolLabel=document.getElementById("keyVolLabel");
-const statusEl=document.getElementById("status");
+const elvisBtn=document.getElementById("elvisBtn");
+const boomBtn=document.getElementById("boomBtn");
 
-/* WEB AUDIO */
 let ctx;
-function ac(){ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); return ctx; }
+function ac(){ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); return ctx;}
 
 function playKey(){
   const o=ac().createOscillator();
   const g=ac().createGain();
-  o.frequency.value=300+Math.random()*800;
-  g.gain.value=keyVol.value*0.18;
-  o.connect(g).connect(ac().destination);
-  o.start();
-  o.stop(ac().currentTime+0.12);
+  o.frequency.value=220+Math.random()*900;
+  g.gain.value=Number(keyVol.value)*0.18;
+  o.connect(g); g.connect(ac().destination);
+  o.start(); o.stop(ac().currentTime+0.12);
 }
 
-const KEYS="ASDFGHJKLQWERTYUIOP";
+const KEYS=new Set("ASDFGHJKLQWERTYUIOP".split(""));
 window.addEventListener("keydown",e=>{
-  if(KEYS.includes(e.key.toUpperCase())) playKey();
-});
+  if(!KEYS.has(e.key.toUpperCase()))return;
+  e.preventDefault(); playKey();
+},{passive:false});
 
-/* VOLUMES */
-beatVol.oninput=()=>{beat.volume=beatVol.value;beatVolLabel.textContent=beatVol.value}
-keyVol.oninput=()=>keyVolLabel.textContent=keyVol.value;
+function sync(){
+  beat.volume=Number(beatVol.value);
+  beatVolLabel.textContent=Number(beatVol.value).toFixed(2);
+  keyVolLabel.textContent=Number(keyVol.value).toFixed(2);
+}
+beatVol.oninput=sync; keyVol.oninput=sync; sync();
 
-/* BEAT */
 startBeat.onclick=async()=>{
   ac().resume();
   beat.currentTime=0;
   await beat.play();
   startBeat.disabled=true;
   stopBeat.disabled=false;
-  statusEl.textContent="Status: playing";
+  statusEl.textContent="Status: beat playing";
 };
+
 stopBeat.onclick=()=>{
-  beat.pause();
-  beat.currentTime=0;
-  startBeat.disabled=false;
-  stopBeat.disabled=true;
+  beat.pause(); beat.currentTime=0;
+  startBeat.disabled=false; stopBeat.disabled=true;
   statusEl.textContent="Status: stopped";
 };
 
-/* FX */
-elvisBtn.onclick=()=>{ac().resume(); elvis.currentTime=0; elvis.play()}
-boomBtn.onclick=()=>{ac().resume(); boom.currentTime=0; boom.play()}
+elvisBtn.onclick=async()=>{ac().resume(); elvis.currentTime=0; await elvis.play();}
+boomBtn.onclick=async()=>{ac().resume(); boom.currentTime=0; await boom.play();}
 
-/* RECORDER */
 const recBtn=document.getElementById("recBtn");
-const stopRecBtn=document.getElementById("stopRecBtn");
-const recStatus=document.getElementById("recStatus");
-const playback=document.getElementById("playback");
-const download=document.getElementById("download");
-
-let recorder, chunks=[], stream;
-
-recBtn.onclick=async()=>{
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    recorder=new MediaRecorder(stream);
-    chunks=[];
-    recorder.ondataavailable=e=>chunks.push(e.data);
-    recorder.onstop=()=>{
-      const blob=new Blob(chunks,{type:"audio/webm"});
-      const url=URL.createObjectURL(blob);
-      playback.src=url;
-      download.href=url;
-      download.download="mychillingtime.webm";
-      download.style.display="block";
-      recStatus.textContent="Recorder: saved";
-      stream.getTracks().forEach(t=>t.stop());
-    };
-    recorder.start();
-    recBtn.disabled=true;
-    stopRecBtn.disabled=false;
-    recStatus.textContent="Recorder: recording…";
-  }catch{
-    recStatus.textContent="❌ Mic blocked. Use Chrome + allow mic + open on localhost.";
-  }
-};
-
-stopRecBtn.onclick=()=>{
-  recorder.stop();
-  recBtn.disabled=false;
-  stopRecBtn.disabled=true;
-};
-</script>
-</body>
-</html>
+const stopRecBtn=document.getElementById("stopRecBtn
