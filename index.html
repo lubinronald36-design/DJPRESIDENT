@@ -23,7 +23,6 @@ kbd{display:inline-block;min-width:28px;text-align:center;padding:6px 8px;margin
 .status{margin-top:10px;font-size:13px;color:#aab3d6}
 .mono{font-family:ui-monospace,monospace}
 audio{width:100%}
-a{color:#9fffcf}
 </style>
 </head>
 
@@ -37,6 +36,7 @@ Files in SAME folder:
 <span class="mono">boom.wav</span>
 </p>
 
+<!-- BEAT -->
 <div class="card">
   <div class="row">
     <button id="startBeat" class="primary">▶ Start Beat</button>
@@ -57,6 +57,7 @@ Files in SAME folder:
   <div class="status" id="status">Status: ready.</div>
 </div>
 
+<!-- FX -->
 <div class="card">
   <div class="row">
     <button id="elvisBtn" class="primary">🎙️ ELVIS</button>
@@ -64,6 +65,7 @@ Files in SAME folder:
   </div>
 </div>
 
+<!-- KEYS -->
 <div class="card">
   <p class="muted"><b>Keyboard (API)</b></p>
   <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd><kbd>J</kbd>
@@ -71,6 +73,7 @@ Files in SAME folder:
   <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd><kbd>U</kbd><kbd>I</kbd><kbd>O</kbd><kbd>P</kbd>
 </div>
 
+<!-- RECORDER -->
 <div class="card">
   <div class="row">
     <button id="recBtn" class="primary">⏺ Start Recording</button>
@@ -78,19 +81,17 @@ Files in SAME folder:
   </div>
   <div class="status" id="recStatus">Recorder: idle.</div>
   <audio id="playback" controls></audio>
-  <a id="download" style="display:none">⬇ Download recording</a>
+  <a id="download" style="display:none;color:#9fffcf">⬇ Download recording</a>
 </div>
 </div>
 
 <script>
+/* FILES */
 const BEAT_FILE="bott.mp3";
 const ELVIS_FILE="dj-elvis-dante.wav";
 const BOOM_FILE="boom.wav";
 
-const beat=new Audio(BEAT_FILE); beat.loop=true;
-const elvis=new Audio(ELVIS_FILE);
-const boom=new Audio(BOOM_FILE);
-
+/* UI */
 const statusEl=document.getElementById("status");
 const startBeat=document.getElementById("startBeat");
 const stopBeat=document.getElementById("stopBeat");
@@ -101,48 +102,89 @@ const keyVolLabel=document.getElementById("keyVolLabel");
 const elvisBtn=document.getElementById("elvisBtn");
 const boomBtn=document.getElementById("boomBtn");
 
+/* AUDIO */
+const beat=new Audio(BEAT_FILE); beat.loop=true;
+const elvis=new Audio(ELVIS_FILE);
+const boom=new Audio(BOOM_FILE);
+
+/* WEB AUDIO KEYS */
 let ctx;
 function ac(){ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); return ctx;}
-
 function playKey(){
   const o=ac().createOscillator();
   const g=ac().createGain();
   o.frequency.value=220+Math.random()*900;
-  g.gain.value=Number(keyVol.value)*0.18;
+  g.gain.value=keyVol.value*0.18;
   o.connect(g); g.connect(ac().destination);
   o.start(); o.stop(ac().currentTime+0.12);
 }
-
 const KEYS=new Set("ASDFGHJKLQWERTYUIOP".split(""));
 window.addEventListener("keydown",e=>{
   if(!KEYS.has(e.key.toUpperCase()))return;
   e.preventDefault(); playKey();
 },{passive:false});
 
+/* VOLUMES */
 function sync(){
-  beat.volume=Number(beatVol.value);
-  beatVolLabel.textContent=Number(beatVol.value).toFixed(2);
-  keyVolLabel.textContent=Number(keyVol.value).toFixed(2);
+  beat.volume=beatVol.value;
+  beatVolLabel.textContent=beatVol.value;
+  keyVolLabel.textContent=keyVol.value;
 }
 beatVol.oninput=sync; keyVol.oninput=sync; sync();
 
+/* BEAT */
 startBeat.onclick=async()=>{
-  ac().resume();
-  beat.currentTime=0;
-  await beat.play();
-  startBeat.disabled=true;
-  stopBeat.disabled=false;
-  statusEl.textContent="Status: beat playing";
+  try{ac().resume(); beat.currentTime=0; await beat.play();
+    startBeat.disabled=true; stopBeat.disabled=false;
+    statusEl.textContent="Status: beat playing";
+  }catch{statusEl.textContent="❌ bott.mp3 missing";}
 };
-
 stopBeat.onclick=()=>{
   beat.pause(); beat.currentTime=0;
   startBeat.disabled=false; stopBeat.disabled=true;
   statusEl.textContent="Status: stopped";
 };
 
-elvisBtn.onclick=async()=>{ac().resume(); elvis.currentTime=0; await elvis.play();}
-boomBtn.onclick=async()=>{ac().resume(); boom.currentTime=0; await boom.play();}
+/* FX */
+elvisBtn.onclick=async()=>{ try{ac().resume(); elvis.currentTime=0; await elvis.play();}catch{} };
+boomBtn.onclick=async()=>{ try{ac().resume(); boom.currentTime=0; await boom.play();}catch{} };
 
+/* RECORDER */
 const recBtn=document.getElementById("recBtn");
-const stopRecBtn=document.getElementById("stopRecBtn
+const stopRecBtn=document.getElementById("stopRecBtn");
+const recStatus=document.getElementById("recStatus");
+const playback=document.getElementById("playback");
+const download=document.getElementById("download");
+
+let rec, chunks=[], stream;
+
+recBtn.onclick=async()=>{
+  stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  rec=new MediaRecorder(stream);
+  chunks=[];
+  rec.ondataavailable=e=>chunks.push(e.data);
+  rec.onstop=()=>{
+    const blob=new Blob(chunks,{type:"audio/webm"});
+    const url=URL.createObjectURL(blob);
+    playback.src=url;
+    download.href=url;
+    download.download="mychillingtime-voice.webm";
+    download.style.display="block";
+    recStatus.textContent="Recorder: saved";
+    stream.getTracks().forEach(t=>t.stop());
+  };
+  rec.start();
+  recBtn.disabled=true;
+  stopRecBtn.disabled=false;
+  recStatus.textContent="Recorder: recording…";
+};
+
+stopRecBtn.onclick=()=>{
+  rec.stop();
+  recBtn.disabled=false;
+  stopRecBtn.disabled=true;
+};
+</script>
+</body>
+</html>
+
